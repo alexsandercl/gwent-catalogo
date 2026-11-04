@@ -1,0 +1,3 @@
+# Binarios baixados e logs do ambiente local sem Docker
+ambiente-local/bin/
+ambiente-local/logs/

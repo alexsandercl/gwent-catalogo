@@ -1,0 +1,58 @@
+{
+  "info": {
+    "name": "Gwent - Checkpoint 26/10",
+    "description": "Testes A-D do catalogo de cartas Gwent via RESTHeart (http://localhost:8080). Basic Auth admin:secret configurado na colecao.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "basic",
+    "basic": [
+      { "key": "username", "value": "admin", "type": "string" },
+      { "key": "password", "value": "secret", "type": "string" }
+    ]
+  },
+  "variable": [{ "key": "baseUrl", "value": "http://localhost:8080" }],
+  "item": [
+    {
+      "name": "A - Criar banco gwent (PUT)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('201 Created', () => pm.response.to.have.status(201));"] } }],
+      "request": {
+        "method": "PUT",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{}" },
+        "url": "{{baseUrl}}/gwent"
+      }
+    },
+    {
+      "name": "B - Criar colecao cartas (PUT)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('201 Created', () => pm.response.to.have.status(201));"] } }],
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "url": "{{baseUrl}}/gwent/cartas"
+      }
+    },
+    {
+      "name": "C - Inserir carta (POST)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('201 Created', () => pm.response.to.have.status(201));"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id_gwent_one\": 112102,\n  \"nome\": \"Geralt: Igni\",\n  \"faccao\": \"Neutro\",\n  \"tipo\": \"Unidade\",\n  \"cor\": \"Ouro\",\n  \"raridade\": \"Lendária\",\n  \"conjunto\": \"Jogo Base\",\n  \"poder\": 3,\n  \"provisoes\": 10,\n  \"armadura\": 0,\n  \"categorias\": [\"Bruxo\"],\n  \"habilidades\": [\n    {\n      \"palavra_chave\": \"Mobilizar\",\n      \"efeito\": \"Destrua a(s) unidade(s) de maior poder em uma fileira inimiga com 40 ou mais de poder total.\"\n    },\n    {\n      \"palavra_chave\": \"Iniciativa\",\n      \"efeito\": \"Em vez disso, destrua a(s) unidade(s) de maior poder em uma fileira inimiga com 25 ou mais de poder total.\"\n    }\n  ],\n  \"fonte\": {\n    \"site\": \"gwent.one\",\n    \"url\": \"https://gwent.one/en/card/112102\"\n  },\n  \"data_cadastro\": \"2026-10-26T10:00:00Z\",\n  \"favorito_equipe\": true,\n  \"nota\": 9.5\n}"
+        },
+        "url": "{{baseUrl}}/gwent/cartas"
+      }
+    },
+    {
+      "name": "D - Listar cartas (GET)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/gwent/cartas"
+      }
+    }
+  ]
+}

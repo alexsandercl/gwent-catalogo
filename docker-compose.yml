@@ -1,0 +1,43 @@
+name: gwent-catalogo
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: gwent-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 10s
+
+  restheart:
+    image: softinstigate/restheart:latest
+    container_name: gwent-restheart
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      # Mantida por compatibilidade com o enunciado. O RESTHeart 9 (imagem latest)
+      # NAO le esta variavel: a conexao efetiva e definida pelo RHO abaixo.
+      MONGO_URI: "mongodb://mongodb:27017"
+      # RHO = RESTHeart Overrides (sobrescreve restheart-default-config.yml)
+      #  - connection-string: aponta para o servico "mongodb" da rede do compose
+      #  - http-listener/host: aceita conexoes vindas de fora do container
+      #  - mongo-mounts: expoe TODOS os bancos na raiz, para que /gwent seja o
+      #    banco "gwent" (o padrao do RESTHeart 9 e /restheart -> /, o que faria
+      #    PUT /gwent criar uma colecao dentro do banco "restheart")
+      RHO: >
+        /mclient/connection-string->"mongodb://mongodb:27017";
+        /http-listener/host->"0.0.0.0";
+        /mongo/mongo-mounts[1]->{"what":"*","where":"/"};
+    restart: unless-stopped
+
+volumes:
+  mongo-data:

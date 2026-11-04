@@ -1,0 +1,30 @@
+{
+  "id_gwent_one": 112102,
+  "nome": "Geralt: Igni",
+  "faccao": "Neutro",
+  "tipo": "Unidade",
+  "cor": "Ouro",
+  "raridade": "Lendária",
+  "conjunto": "Jogo Base",
+  "poder": 3,
+  "provisoes": 10,
+  "armadura": 0,
+  "categorias": ["Bruxo"],
+  "habilidades": [
+    {
+      "palavra_chave": "Mobilizar",
+      "efeito": "Destrua a(s) unidade(s) de maior poder em uma fileira inimiga com 40 ou mais de poder total."
+    },
+    {
+      "palavra_chave": "Iniciativa",
+      "efeito": "Em vez disso, destrua a(s) unidade(s) de maior poder em uma fileira inimiga com 25 ou mais de poder total."
+    }
+  ],
+  "fonte": {
+    "site": "gwent.one",
+    "url": "https://gwent.one/en/card/112102"
+  },
+  "data_cadastro": "2026-10-26T10:00:00Z",
+  "favorito_equipe": true,
+  "nota": 9.5
+}
