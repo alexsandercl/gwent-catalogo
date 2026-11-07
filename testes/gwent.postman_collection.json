@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "Gwent - Checkpoint 26/10",
-    "description": "Testes A-D do catalogo de cartas Gwent via RESTHeart (http://localhost:8080). Basic Auth admin:secret configurado na colecao.",
+    "name": "Gwent - Catalogo (CRUD RESTHeart)",
+    "description": "Testes do catalogo de cartas Gwent via RESTHeart (http://localhost:8080). Basic Auth admin:secret (ambiente academico local) configurado na colecao. Rode na ordem A-J: A-D sao o checkpoint de 26/10; E-J usam somente o documento criado em C (URL guardada na variavel cartaUrl) e o excluem no final, sem tocar nas cartas ja existentes.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -11,11 +11,14 @@
       { "key": "password", "value": "secret", "type": "string" }
     ]
   },
-  "variable": [{ "key": "baseUrl", "value": "http://localhost:8080" }],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "cartaUrl", "value": "" }
+  ],
   "item": [
     {
       "name": "A - Criar banco gwent (PUT)",
-      "event": [{ "listen": "test", "script": { "exec": ["pm.test('201 Created', () => pm.response.to.have.status(201));"] } }],
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('201 Created (ou 200 se o banco ja existir)', () => pm.expect(pm.response.code).to.be.oneOf([201, 200]));"] } }],
       "request": {
         "method": "PUT",
         "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -25,7 +28,7 @@
     },
     {
       "name": "B - Criar colecao cartas (PUT)",
-      "event": [{ "listen": "test", "script": { "exec": ["pm.test('201 Created', () => pm.response.to.have.status(201));"] } }],
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('201 Created (ou 200 se a colecao ja existir)', () => pm.expect(pm.response.code).to.be.oneOf([201, 200]));"] } }],
       "request": {
         "method": "PUT",
         "header": [],
@@ -34,7 +37,12 @@
     },
     {
       "name": "C - Inserir carta (POST)",
-      "event": [{ "listen": "test", "script": { "exec": ["pm.test('201 Created', () => pm.response.to.have.status(201));"] } }],
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('201 Created', () => pm.response.to.have.status(201));",
+        "const location = pm.response.headers.get('Location');",
+        "pm.test('Location com a URL do documento criado', () => pm.expect(location).to.include('/gwent/cartas/'));",
+        "pm.collectionVariables.set('cartaUrl', location);"
+      ] } }],
       "request": {
         "method": "POST",
         "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -47,12 +55,66 @@
     },
     {
       "name": "D - Listar cartas (GET)",
-      "event": [{ "listen": "test", "script": { "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }],
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('200 OK', () => pm.response.to.have.status(200));",
+        "pm.test('Resposta e uma lista', () => pm.expect(pm.response.json()).to.be.an('array'));"
+      ] } }],
       "request": {
         "method": "GET",
         "header": [],
-        "url": "{{baseUrl}}/gwent/cartas"
+        "url": "{{baseUrl}}/gwent/cartas?pagesize=100"
       }
+    },
+    {
+      "name": "E - Buscar a carta criada (GET por id)",
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('200 OK', () => pm.response.to.have.status(200));",
+        "pm.test('E a carta do teste C', () => pm.expect(pm.response.json().id_gwent_one).to.eql(112102));"
+      ] } }],
+      "request": { "method": "GET", "header": [], "url": "{{cartaUrl}}" }
+    },
+    {
+      "name": "F - Substituir a carta (PUT)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }],
+      "request": {
+        "method": "PUT",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id_gwent_one\": 112102,\n  \"nome\": \"Geralt: Igni\",\n  \"faccao\": \"Neutro\",\n  \"tipo\": \"Unidade\",\n  \"cor\": \"Ouro\",\n  \"raridade\": \"Lendária\",\n  \"conjunto\": \"Jogo Base\",\n  \"poder\": 4,\n  \"provisoes\": 10,\n  \"armadura\": 0,\n  \"categorias\": [\"Bruxo\"],\n  \"habilidades\": [\n    {\n      \"palavra_chave\": \"Mobilizar\",\n      \"efeito\": \"Destrua a(s) unidade(s) de maior poder em uma fileira inimiga com 40 ou mais de poder total.\"\n    }\n  ],\n  \"fonte\": {\n    \"site\": \"gwent.one\",\n    \"url\": \"https://gwent.one/en/card/112102\"\n  },\n  \"data_cadastro\": \"2026-10-26T10:00:00Z\",\n  \"favorito_equipe\": true,\n  \"nota\": 8\n}"
+        },
+        "url": "{{cartaUrl}}"
+      }
+    },
+    {
+      "name": "G - Alterar so o favorito (PATCH)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{ \"favorito_equipe\": false }" },
+        "url": "{{cartaUrl}}"
+      }
+    },
+    {
+      "name": "H - Conferir PUT e PATCH (GET)",
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('200 OK', () => pm.response.to.have.status(200));",
+        "const c = pm.response.json();",
+        "pm.test('PUT gravou poder 4 e nota 8', () => { pm.expect(c.poder).to.eql(4); pm.expect(c.nota).to.eql(8); });",
+        "pm.test('PATCH mudou so o favorito', () => { pm.expect(c.favorito_equipe).to.eql(false); pm.expect(c.nome).to.eql('Geralt: Igni'); });"
+      ] } }],
+      "request": { "method": "GET", "header": [], "url": "{{cartaUrl}}" }
+    },
+    {
+      "name": "I - Excluir a carta (DELETE)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('204 No Content', () => pm.response.to.have.status(204));"] } }],
+      "request": { "method": "DELETE", "header": [], "url": "{{cartaUrl}}" }
+    },
+    {
+      "name": "J - Carta excluida nao existe mais (GET)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('404 Not Found', () => pm.response.to.have.status(404));"] } }],
+      "request": { "method": "GET", "header": [], "url": "{{cartaUrl}}" }
     }
   ]
 }

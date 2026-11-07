@@ -35,3 +35,14 @@ if (-not (Get-Process restheart -ErrorAction SilentlyContinue)) {
 }
 if (-not (Esperar-Porta 8080 60)) { throw 'RESTHeart nao respondeu na porta 8080 (veja logs\restheart.log)' }
 Write-Host 'RESTHeart ok em http://localhost:8080 (admin / secret)'
+
+# Frontend (arquivos estaticos de frontend\ na porta 3000, como o servico "frontend" do compose)
+$pidFrontend = Join-Path $logs 'frontend.pid'
+$rodando = (Test-Path $pidFrontend) -and (Get-Process -Id ([int](Get-Content $pidFrontend)) -ErrorAction SilentlyContinue)
+if (-not $rodando) {
+    $proc = Start-Process powershell -WindowStyle Hidden -PassThru -ArgumentList @(
+        '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$(Join-Path $raiz 'servidor-frontend.ps1')`"")
+    Set-Content -Path $pidFrontend -Value $proc.Id
+}
+if (-not (Esperar-Porta 3000 20)) { throw 'Frontend nao respondeu na porta 3000' }
+Write-Host 'Frontend ok em http://localhost:3000'

@@ -39,5 +39,19 @@ services:
         /mongo/mongo-mounts[1]->{"what":"*","where":"/"};
     restart: unless-stopped
 
+  # Interface web (HTML/CSS/JS estaticos) em http://localhost:3000.
+  # O navegador chama o RESTHeart direto em http://localhost:8080 (o RESTHeart libera
+  # CORS para http://localhost:* por padrao) e a API publica api.gwent.one (CORS *).
+  frontend:
+    image: nginx:alpine
+    container_name: gwent-frontend
+    depends_on:
+      - restheart
+    ports:
+      - "3000:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+    restart: unless-stopped
+
 volumes:
   mongo-data:

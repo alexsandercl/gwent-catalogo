@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Catálogo Gwent</title>
+  <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+  <header class="topo">
+    <div class="topo-conteudo">
+      <div>
+        <h1>Catálogo de Cartas Gwent</h1>
+        <p class="subtitulo">Dados importados de <a href="https://api.gwent.one/" target="_blank" rel="noopener">api.gwent.one</a> e guardados no MongoDB via RESTHeart</p>
+      </div>
+      <form id="form-importar" class="importar" novalidate>
+        <label for="qtd-importar">Cartas a importar</label>
+        <div class="importar-linha">
+          <input id="qtd-importar" type="number" min="30" max="300" step="1" value="42" required>
+          <button type="submit" class="botao primario" id="botao-importar">Importar da API</button>
+        </div>
+        <div id="progresso-importar" class="progresso" hidden>
+          <span id="progresso-texto"></span>
+          <div class="barra"><div id="progresso-barra"></div></div>
+        </div>
+      </form>
+    </div>
+  </header>
+
+  <div id="avisos" class="avisos" aria-live="polite"></div>
+
+  <main>
+    <section id="painel" aria-labelledby="titulo-painel">
+      <h2 id="titulo-painel">Painel</h2>
+      <p class="nota-secao">Calculado a partir de todas as cartas gravadas no banco. Atualiza após cada alteração.</p>
+      <div id="indicadores" class="indicadores"></div>
+      <div class="graficos">
+        <article class="cartao-painel">
+          <h3>Cartas por facção</h3>
+          <div id="grafico-faccao" class="grafico"></div>
+        </article>
+        <article class="cartao-painel">
+          <h3>Cartas por raridade</h3>
+          <div id="grafico-raridade" class="grafico"></div>
+        </article>
+        <article class="cartao-painel">
+          <h3>Top 5 por poder</h3>
+          <ol id="ranking" class="ranking"></ol>
+        </article>
+        <article class="cartao-painel">
+          <h3>Cartas por categoria</h3>
+          <ul id="agrupamento" class="agrupamento"></ul>
+        </article>
+      </div>
+    </section>
+
+    <section id="catalogo" aria-labelledby="titulo-catalogo">
+      <div class="cabecalho-secao">
+        <h2 id="titulo-catalogo">Catálogo</h2>
+        <button type="button" class="botao primario" id="botao-nova">+ Nova carta</button>
+      </div>
+
+      <div class="filtros" role="search">
+        <label class="campo-busca">
+          <span class="sr">Buscar</span>
+          <input id="busca" type="search" placeholder="Buscar por nome ou categoria (ex.: Bruxo)">
+        </label>
+        <label><span>Facção</span><select id="filtro-faccao"><option value="">Todas</option></select></label>
+        <label><span>Tipo</span><select id="filtro-tipo"><option value="">Todos</option></select></label>
+        <label><span>Raridade</span><select id="filtro-raridade"><option value="">Todas</option></select></label>
+        <label><span>Ordenar</span>
+          <select id="ordenar">
+            <option value="nome">Nome (A–Z)</option>
+            <option value="poder">Maior poder</option>
+            <option value="provisoes">Maior provisão</option>
+            <option value="nota">Maior nota</option>
+            <option value="recentes">Cadastro mais recente</option>
+          </select>
+        </label>
+        <label class="check"><input id="filtro-favoritas" type="checkbox"> Só favoritas</label>
+        <button type="button" class="botao" id="botao-limpar">Limpar filtros</button>
+      </div>
+      <p id="contagem" class="contagem"></p>
+
+      <div id="estado" class="estado" hidden></div>
+      <div id="lista" class="lista"></div>
+    </section>
+  </main>
+
+  <footer class="rodape">
+    Trabalho acadêmico — Alexsander Carlos de Lima, Gregory Guths e Renan Franco Ramos.
+    Credenciais locais de teste; não é uma configuração de produção.
+  </footer>
+
+  <dialog id="dialogo-carta" aria-labelledby="titulo-dialogo">
+    <form id="form-carta" method="dialog" novalidate>
+      <h2 id="titulo-dialogo">Nova carta</h2>
+      <div class="grade-form">
+        <label class="largo">Nome *<input name="nome" type="text" maxlength="80"><small class="erro-campo"></small></label>
+        <label>Facção *<select name="faccao"></select><small class="erro-campo"></small></label>
+        <label>Tipo *<select name="tipo"></select><small class="erro-campo"></small></label>
+        <label>Raridade *<select name="raridade"></select><small class="erro-campo"></small></label>
+        <label>Cor<select name="cor"></select><small class="erro-campo"></small></label>
+        <label>Poder *<input name="poder" type="number" min="0" max="99" step="1" inputmode="numeric"><small class="erro-campo"></small></label>
+        <label>Provisões<input name="provisoes" type="number" min="0" max="30" step="1" inputmode="numeric"><small class="erro-campo"></small></label>
+        <label>Armadura<input name="armadura" type="number" min="0" max="99" step="1" inputmode="numeric"><small class="erro-campo"></small></label>
+        <label>Conjunto<input name="conjunto" type="text" maxlength="60"><small class="erro-campo"></small></label>
+        <label class="largo">Categorias <span class="dica">(separadas por vírgula)</span><input name="categorias" type="text" maxlength="200" placeholder="Bruxo, Humano"><small class="erro-campo"></small></label>
+        <label class="largo">Habilidades <span class="dica">(uma por linha, no formato "Palavra-chave: efeito")</span><textarea name="habilidades" rows="3" maxlength="1500"></textarea><small class="erro-campo"></small></label>
+        <label class="largo">URL da imagem<input name="imagem" type="url" maxlength="300" placeholder="https://…"><small class="erro-campo"></small></label>
+        <label>ID gwent.one<input name="id_gwent_one" type="number" min="1" step="1" inputmode="numeric"><small class="erro-campo"></small></label>
+        <label>Nota da equipe (0–10)<input name="nota" type="number" min="0" max="10" step="0.5" inputmode="decimal"><small class="erro-campo"></small></label>
+        <label class="check largo"><input name="favorito_equipe" type="checkbox"> Favorita da equipe</label>
+      </div>
+      <p id="erro-form" class="erro-form" role="alert" hidden></p>
+      <div class="acoes-dialogo">
+        <button type="button" class="botao" data-fechar>Cancelar</button>
+        <button type="submit" class="botao primario" id="botao-salvar">Salvar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dialogo-confirmar" aria-labelledby="titulo-confirmar">
+    <form method="dialog">
+      <h2 id="titulo-confirmar">Excluir carta?</h2>
+      <p id="texto-confirmar"></p>
+      <div class="acoes-dialogo">
+        <button value="cancelar" class="botao">Cancelar</button>
+        <button value="confirmar" class="botao perigo">Excluir</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
