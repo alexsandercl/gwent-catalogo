@@ -68,6 +68,11 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px s
 .botao.perigo-leve { color: #ff9b91; }
 .botao.perigo-leve:hover { border-color: var(--erro); }
 
+.faixa {
+  margin: 0; padding: 10px 16px; text-align: center; font-size: .9rem;
+  background: rgba(224, 165, 38, .14); border-bottom: 1px solid var(--alerta); color: var(--texto);
+}
+
 /* ---------- Avisos ---------- */
 .avisos {
   position: fixed; z-index: 20; right: 16px; bottom: 16px; left: 16px;
@@ -190,6 +195,7 @@ dialog h2 { font-size: 1.2rem; margin-bottom: 14px; }
 .erro-campo { color: #ff9b91; min-height: 0; font-size: .78rem; }
 .erro-form { color: #ffb3ab; background: rgba(224, 90, 79, .12); border: 1px solid var(--erro); border-radius: 8px; padding: 8px 10px; }
 .acoes-dialogo { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.acoes-dialogo.invertido { flex-direction: row-reverse; justify-content: flex-start; }
 
 .rodape { text-align: center; color: var(--texto-suave); font-size: .8rem; padding: 20px 16px 90px; border-top: 1px solid var(--borda); }
 

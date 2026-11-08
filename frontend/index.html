@@ -27,6 +27,11 @@
     </div>
   </header>
 
+  <p id="faixa-sem-banco" class="faixa" hidden>
+    Versão pública sem banco de dados: a listagem, a importação, o cadastro, a edição e o painel dependem do
+    MongoDB/RESTHeart, que não roda no GitHub Pages. Veja no README como rodar localmente ou configurar um backend.
+  </p>
+
   <div id="avisos" class="avisos" aria-live="polite"></div>
 
   <main>
@@ -127,6 +132,22 @@
       <div class="acoes-dialogo">
         <button value="cancelar" class="botao">Cancelar</button>
         <button value="confirmar" class="botao perigo">Excluir</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dialogo-login" aria-labelledby="titulo-login">
+    <form id="form-login" method="dialog">
+      <h2 id="titulo-login">Entrar no banco de dados</h2>
+      <p class="nota-secao">O backend pede usuário e senha. O login fica guardado só nesta aba do navegador.</p>
+      <div class="grade-form">
+        <label>Usuário<input name="usuario" type="text" autocomplete="username" required></label>
+        <label>Senha<input name="senha" type="password" autocomplete="current-password"></label>
+      </div>
+      <!-- "Entrar" vem primeiro no HTML para ser o botao acionado pelo Enter; o CSS inverte a ordem visual -->
+      <div class="acoes-dialogo invertido">
+        <button value="entrar" class="botao primario">Entrar</button>
+        <button value="cancelar" class="botao" formnovalidate>Cancelar</button>
       </div>
     </form>
   </dialog>

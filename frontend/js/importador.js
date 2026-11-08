@@ -4,7 +4,7 @@
 //             response: { "0": { id: {card, art, audio}, attributes: {...}, name, category,
 //                                ability, ability_html, keyword_html, flavor }, "1": ... } }
 import { CONFIG } from './config.js';
-import { ErroHttp, mensagemDeStatus, criarCarta, listarCartas } from './api.js';
+import { ErroHttp, mensagemDeStatus, criarCarta, listarCartas, bancoConfigurado, MENSAGEM_SEM_BANCO } from './api.js';
 
 // Traducao dos codigos da API para os nomes usados no modelo (dados/carta-modelo.json).
 // Valores fora destas tabelas sao gravados como vieram da API.
@@ -131,6 +131,7 @@ export function mapearCarta(c, versao, agoraIso) {
 
 // Busca na API, compara com o banco por id_gwent_one e grava (POST) so as cartas novas.
 export async function importarCartas(quantidade, aoProgredir = () => {}) {
+  if (!bancoConfigurado) throw new ErroHttp(0, MENSAGEM_SEM_BANCO); // nao baixa a API se nao ha onde gravar
   aoProgredir({ etapa: 'Buscando cartas na API gwent.one…' });
   const { cartas, versao } = await buscarCartasDaApi();
   const selecionadas = selecionarCartas(cartas, quantidade);

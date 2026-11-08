@@ -29,12 +29,14 @@ Aplicação web em grupo que conecta três peças:
 
 ```
 gwent-catalogo/
+├── .github/workflows/deploy.yml        # publica a pasta frontend/ no GitHub Pages a cada push na main
 ├── docker-compose.yml                  # MongoDB + RESTHeart + frontend (nginx)
-├── frontend/                           # interface web (servida em http://localhost:3000)
+├── frontend/                           # interface web (http://localhost:3000 e GitHub Pages)
 │   ├── index.html
 │   ├── css/estilos.css
 │   └── js/
-│       ├── config.js                   # endereços da API do banco e da gwent.one, credenciais locais
+│       ├── config.js                   # valores padrão + escolha do arquivo de configuração do ambiente
+│       ├── config.local.js             # RESTHeart local e credenciais acadêmicas (não é publicado)
 │       ├── api.js                      # GET/POST/PUT/PATCH/DELETE no RESTHeart + tratamento de erros HTTP
 │       ├── importador.js               # leitura da gwent.one, mapeamento para o modelo, gravação sem duplicatas
 │       ├── painel.js                   # indicadores, gráficos, ranking e agrupamento
@@ -86,7 +88,7 @@ Conferido na configuração padrão do RESTHeart 9 (`restheart-default-config.ym
 
 Basic Auth — usuário **`admin`**, senha **`secret`**. É o usuário que o RESTHeart 9 cria por padrão (`create-user: true`, papel `admin`, que é o `root-role` do autorizador).
 
-> **Somente para uso acadêmico local.** O frontend envia essas credenciais a partir do navegador (`frontend/js/config.js`), o que **não é adequado para produção**: lá seria preciso um usuário com permissões mínimas, HTTPS e autenticação por token ou um backend intermediário.
+> **Somente para uso acadêmico local.** No desenvolvimento, o frontend lê essas credenciais de `frontend/js/config.local.js`, arquivo que **não é publicado** no GitHub Pages. No site publicado, o usuário digita o login numa janela, e ele fica guardado só naquela aba. Para produção ainda seria preciso um usuário com permissões mínimas, HTTPS e, de preferência, autenticação por token.
 
 ## Como iniciar e parar
 
@@ -115,6 +117,62 @@ powershell -ExecutionPolicy Bypass -File ambiente-local\parar.ps1
 ```
 
 Os executáveis não estão no repositório (pasta `ambiente-local/bin/`, no `.gitignore`). Quem clonar precisa baixá-los das origens acima. Os dados do MongoDB ficam em `%LOCALAPPDATA%\GwentCatalogo\dados-mongo`, um caminho curto, porque o MongoDB (WiredTiger) falhou com `No such file or directory` quando a pasta de dados estava dentro de um caminho muito longo. Os logs ficam em `ambiente-local\logs\`.
+
+## Publicação no GitHub Pages
+
+O workflow [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) publica **somente a pasta `frontend/`**, sem mover nem copiar arquivos no repositório.
+
+**Endereço público:** **https://alexsandercl.github.io/gwent-catalogo/**
+
+### 1. Habilitar o GitHub Pages (uma vez)
+
+1. No GitHub, abra o repositório → **Settings** → **Pages**.
+2. Em **Build and deployment** → **Source**, escolha **GitHub Actions**.
+
+Não é preciso escolher branch nem pasta: quem define o que é publicado é o workflow. Faça isso **antes** do primeiro push com o workflow. Se o workflow rodar antes, o passo "Configurar o GitHub Pages" falha; nesse caso, habilite o Pages e rode de novo em **Actions** → **Publicar frontend no GitHub Pages** → **Run workflow**.
+
+### 2. Como a publicação funciona
+
+A cada `git push` na branch `main` (ou manualmente, em **Actions** → **Run workflow**), o workflow:
+
+1. baixa o repositório (`actions/checkout@v7`) e prepara o Pages (`actions/configure-pages@v6`);
+2. **remove `frontend/js/config.local.js`** (endereço e senha do ambiente local) e gera `frontend/js/config.producao.js`, só com o endereço do backend (veja abaixo). Se sobrar a palavra `secret` em `frontend/js`, o workflow para com erro;
+3. envia a pasta `frontend/` (`actions/upload-pages-artifact@v5`, com `path: ./frontend`);
+4. publica (`actions/deploy-pages@v5`) no ambiente `github-pages`, com as permissões `contents: read`, `pages: write` e `id-token: write`.
+
+O processo não usa Docker e não precisa de nada rodando no seu computador. Essas alterações só acontecem na cópia temporária do GitHub Actions: o repositório não muda.
+
+### 3. Onde acompanhar
+
+Na aba **Actions** do repositório, abra a execução **Publicar frontend no GitHub Pages**. Quando termina com sucesso, o link do site aparece no resumo da execução e em **Settings** → **Pages**.
+
+### 4. Caminhos
+
+O site é servido em `/gwent-catalogo/`, e não na raiz do domínio. Todos os caminhos do frontend já são relativos (`css/estilos.css`, `js/app.js`, `import './api.js'`), e as imagens das cartas usam endereços completos da gwent.one, então nada precisou ser alterado para isso. Foi conferido numa simulação servida em `http://localhost:3001/gwent-catalogo/`: todos os arquivos carregaram com status 200 e sem erros no console.
+
+### 5. O que funciona no site público e o que depende de backend
+
+O GitHub Pages hospeda **apenas arquivos estáticos**: MongoDB e RESTHeart não rodam lá.
+
+| Recurso | Depende de | No GitHub Pages hoje |
+|---|---|---|
+| Página, layout, busca e filtros (sobre as cartas carregadas) | só o navegador | abre, mas sem cartas para mostrar |
+| Listagem e painel | RESTHeart/MongoDB (`GET`) | indisponível |
+| Importar da API | api.gwent.one (`GET`) **e** RESTHeart (`POST`) para gravar | indisponível: o botão avisa e nem baixa a API |
+| Cadastrar, editar, favoritar, excluir | RESTHeart (`POST`, `PUT`, `PATCH`, `DELETE`) | indisponível |
+
+Sem backend configurado, o site mostra uma faixa avisando que é a "versão pública sem banco de dados", e o painel e o catálogo explicam o motivo, sem erros. Tudo continua funcionando localmente (Docker ou `ambiente-local`).
+
+**Para ligar o site público a um banco**, quando houver um RESTHeart hospedado:
+
+1. O backend precisa responder em **HTTPS**. O site é HTTPS, e o navegador bloqueia chamadas para um endereço HTTP.
+2. O RESTHeart precisa liberar CORS para a origem `https://alexsandercl.github.io`. Por padrão ele só libera `http://localhost:*`.
+3. No GitHub, crie a variável do repositório em **Settings** → **Secrets and variables** → **Actions** → aba **Variables** → **New repository variable**, com nome `BACKEND_URL` e o endereço da coleção (formato `https://<seu-backend>/gwent/cartas`). Ela não é secreta, porque fica visível no site.
+4. Rode o workflow de novo. Ele gera `config.producao.js` com esse endereço.
+
+A senha **nunca** vai para o código publicado: o site pede usuário e senha numa janela quando o banco exige login. Esse fluxo foi testado na simulação, com o `config.producao.js` apontando para o RESTHeart local: senha errada → `HTTP 401` e nova tentativa; senha certa → 44 cartas carregadas e favorito (PATCH) funcionando.
+
+Nenhum backend hospedado foi configurado neste trabalho, então o site público hoje abre **sem banco**.
 
 ## Usando a aplicação
 
@@ -340,6 +398,7 @@ A equipe usou o **Claude Code (Anthropic)** como assistente de programação dur
 - **Configuração do RESTHeart:** leitura da configuração padrão da versão 9, que mostrou que `MONGO_URI` não é usada e que o mount padrão precisava ser alterado.
 - **API pública:** leitura da documentação de api.gwent.one e análise da resposta real (formato, campos, valores), usada para definir o mapeamento.
 - **Código:** escrita do frontend (`frontend/`), do importador, do painel, do `docker-compose.yml` e dos testes (`testes/`).
+- **Publicação:** workflow do GitHub Pages, separação da configuração local (com senha) da publicada e simulação do site em `/gwent-catalogo/`.
 - **Testes e documentação:** execução dos testes HTTP, testes da interface no navegador (inclusive na largura de celular) e redação deste README.
 
 Todas as respostas da API e todos os resultados de teste registrados aqui vêm de execuções reais, e não de exemplos inventados.

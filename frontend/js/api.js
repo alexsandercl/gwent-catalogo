@@ -29,26 +29,62 @@ export function mensagemDeStatus(status, detalhe) {
   return `${base} (HTTP ${status})${detalhe ? `: ${detalhe}` : ''}`;
 }
 
-function cabecalhos(comCorpo) {
-  const h = {
-    Authorization: 'Basic ' + btoa(`${CONFIG.usuario}:${CONFIG.senha}`),
-    // Evita a janela de login do navegador quando a resposta for 401
-    'No-Auth-Challenge': 'true',
-  };
+// false no GitHub Pages enquanto nenhum backend (variavel BACKEND_URL) estiver configurado
+export const bancoConfigurado = Boolean(CONFIG.apiBanco);
+export const MENSAGEM_SEM_BANCO = 'Esta versão do site não tem banco de dados configurado. A importação e o cadastro, a edição, '
+  + 'os favoritos e a exclusão de cartas precisam do MongoDB/RESTHeart: rode o projeto localmente ou configure um backend hospedado (veja o README).';
+
+// Credenciais: as do config.local.js (desenvolvimento) ou as digitadas pelo usuario,
+// guardadas so nesta aba (sessionStorage). Nunca ficam no codigo publicado.
+const CHAVE_LOGIN = 'gwent-catalogo-login';
+let pedirLogin = async () => null;
+export function definirPedidoDeLogin(funcao) { pedirLogin = funcao; }
+
+function loginSalvo() {
+  if (CONFIG.usuario) return { usuario: CONFIG.usuario, senha: CONFIG.senha ?? '', fixo: true };
+  try { return JSON.parse(sessionStorage.getItem(CHAVE_LOGIN)); } catch { return null; }
+}
+
+function salvarLogin(login) {
+  try {
+    if (login) sessionStorage.setItem(CHAVE_LOGIN, JSON.stringify(login));
+    else sessionStorage.removeItem(CHAVE_LOGIN);
+  } catch { /* sem sessionStorage: o login vale so ate recarregar a pagina */ }
+}
+
+function cabecalhos(comCorpo, login) {
+  // No-Auth-Challenge evita a janela de login do proprio navegador quando a resposta for 401
+  const h = { 'No-Auth-Challenge': 'true' };
+  if (login) h.Authorization = 'Basic ' + btoa(`${login.usuario}:${login.senha}`);
   if (comCorpo) h['Content-Type'] = 'application/json';
   return h;
 }
 
-async function requisitar(metodo, caminho = '', corpo) {
+async function requisitar(metodo, caminho = '', corpo, jaPediuLogin = false) {
+  if (!bancoConfigurado) throw new ErroHttp(0, MENSAGEM_SEM_BANCO);
+  let login = loginSalvo();
+  if (!login && !jaPediuLogin) {
+    login = await pedirLogin();
+    if (!login) throw new ErroHttp(401, mensagemDeStatus(401, 'login cancelado'));
+    salvarLogin(login);
+    jaPediuLogin = true;
+  }
+
   let resposta;
   try {
     resposta = await fetch(CONFIG.apiBanco + caminho, {
       method: metodo,
-      headers: cabecalhos(corpo !== undefined),
+      headers: cabecalhos(corpo !== undefined, login),
       body: corpo === undefined ? undefined : JSON.stringify(corpo),
     });
   } catch {
     throw new ErroHttp(0, `Não foi possível conectar ao banco em ${CONFIG.apiBanco}. Verifique se o MongoDB e o RESTHeart estão rodando.`);
+  }
+
+  // Login digitado errado: esquece e pede de novo uma vez
+  if (resposta.status === 401 && login && !login.fixo && !jaPediuLogin) {
+    salvarLogin(null);
+    return requisitar(metodo, caminho, corpo, false);
   }
 
   const texto = await resposta.text();
@@ -57,6 +93,7 @@ async function requisitar(metodo, caminho = '', corpo) {
     try { dados = JSON.parse(texto); } catch { dados = texto; }
   }
   if (!resposta.ok) {
+    if (resposta.status === 401 && login && !login.fixo) salvarLogin(null);
     const detalhe = dados && typeof dados === 'object' ? dados.message : null;
     throw new ErroHttp(resposta.status, mensagemDeStatus(resposta.status, detalhe));
   }

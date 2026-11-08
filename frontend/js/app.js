@@ -1,6 +1,6 @@
 import {
   ErroHttp, listarCartas, obterCarta, criarCarta, substituirCarta, atualizarParcialmente, excluirCarta,
-  idDoDocumento, semCamposDoBanco,
+  idDoDocumento, semCamposDoBanco, bancoConfigurado, MENSAGEM_SEM_BANCO, definirPedidoDeLogin,
 } from './api.js';
 import { importarCartas, OPCOES } from './importador.js';
 import { renderizarPainel } from './painel.js';
@@ -37,6 +37,14 @@ function mostrarEstado(html) {
 
 // ---------- Carregamento ----------
 async function recarregar() {
+  if (!bancoConfigurado) {
+    // Site publicado sem backend: nao e um erro, so nao ha banco para ler
+    mostrarEstado(`<div class="vazio">${escaparHtml(MENSAGEM_SEM_BANCO)}</div>`);
+    renderizarLista();
+    renderizarPainel([], document);
+    $('#indicadores').innerHTML = '<p class="vazio-mini">Painel indisponível: o painel é calculado com as cartas do banco.</p>';
+    return;
+  }
   if (!estado.cartas.length) mostrarEstado('<div class="carregando"><span class="giro"></span>Carregando cartas do banco…</div>');
   let falhou = false;
   try {
@@ -392,5 +400,20 @@ $('#botao-limpar').addEventListener('click', () => {
   renderizarLista();
 });
 $('#botao-nova').addEventListener('click', () => abrirFormulario());
+
+// ---------- Login (so no site publicado com backend; no desenvolvimento vem do config.local.js) ----------
+definirPedidoDeLogin(() => new Promise((resolver) => {
+  const dialogo = $('#dialogo-login');
+  const formLogin = $('#form-login');
+  formLogin.reset();
+  dialogo.returnValue = '';
+  dialogo.showModal();
+  dialogo.addEventListener('close', () => {
+    const usuario = formLogin.elements.usuario.value.trim();
+    resolver(dialogo.returnValue === 'entrar' && usuario ? { usuario, senha: formLogin.elements.senha.value } : null);
+  }, { once: true });
+}));
+
+if (!bancoConfigurado) $('#faixa-sem-banco').hidden = false;
 
 recarregar();

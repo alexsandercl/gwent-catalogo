@@ -1,3 +1,6 @@
 # Binarios baixados e logs do ambiente local sem Docker
 ambiente-local/bin/
 ambiente-local/logs/
+
+# Gerado pelo workflow do GitHub Pages
+frontend/js/config.producao.js

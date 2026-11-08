@@ -1,0 +1,55 @@
+# Publica a pasta frontend/ no GitHub Pages a cada push na branch main (ou manualmente pela aba Actions).
+# O GitHub Pages so hospeda arquivos estaticos: MongoDB e RESTHeart NAO rodam aqui.
+name: Publicar frontend no GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Uma publicacao por vez; a que estiver em andamento termina antes da proxima
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o repositorio
+        uses: actions/checkout@v7
+
+      - name: Configurar o GitHub Pages
+        uses: actions/configure-pages@v6
+
+      # config.local.js tem o endereco e as credenciais do ambiente LOCAL: nunca e publicado.
+      # config.producao.js recebe so o endereco do backend (variavel BACKEND_URL do repositorio, opcional).
+      - name: Preparar a configuracao de producao
+        env:
+          BACKEND_URL: ${{ vars.BACKEND_URL }}
+        run: |
+          rm -f frontend/js/config.local.js
+          if [ -n "$BACKEND_URL" ]; then
+            printf 'export default { apiBanco: %s };\n' "$(jq -Rn --arg url "$BACKEND_URL" '$url')" > frontend/js/config.producao.js
+          else
+            printf 'export default { apiBanco: null };\n' > frontend/js/config.producao.js
+          fi
+          cat frontend/js/config.producao.js
+          if grep -rq "secret" frontend/js; then echo "Credencial encontrada no frontend publicado" >&2; exit 1; fi
+
+      - name: Enviar a pasta frontend
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: ./frontend
+
+      - name: Publicar no GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
